@@ -1,10 +1,10 @@
 <template>
-    <div :class="[prefixCls, wrapCls]">
-        <div :class="[prefixCls + '-inner']" ref="inner">
+    <div :class="['scroll-title', wrapCls]">
+        <div class="scroll-title-inner" ref="inner">
             <div class="scroll-title-slider" :style="sliderStyle" ref="slider"
                 >
-                <div class="scroll-title-cursor" :style="cursorStyle"></div>
-                <ul :class="[prefixCls + '-list']"  ref="barList" :style="listStyle"
+                <div class="scroll-title-cursor"  ref="cursor"></div>
+                <ul class="scroll-title-list"  ref="list"
                     @touchstart="onScrollStart"
                     @touchmove="onScrollMove"
                     @touchend="onScrollEnd"
@@ -17,7 +17,6 @@
 </template>
 
 <script>
-let prefixCls = 'scroll-title';
 import { is, EventEmitter } from "../util";
 
 export default {
@@ -26,9 +25,14 @@ export default {
         return {
             bus: new EventEmitter(),
             width: 0,
-            prefixCls: prefixCls,
             activeInShow: 0,//当前选中的在显示的tab的位置
             itemCount: 0,
+            startX: 0,
+            tempX: 0,
+            cursor: {},
+            list: {},
+            cursorTranslateX: 0,
+            listTranslateX: 0,
         }
     },
     props: {
@@ -52,25 +56,17 @@ export default {
             type: Number,
             default: 0
         },
-        
-        
-
     },
     computed: {
         itemWidth(){
             return this.width/this.showCount;
         },
-        listWidth(){
-            return this.$children.length*this.itemWidth;
-        },
         sliderStyle(){
-            let style = {
-                "width": `${this.listWidth}px`,
+            return {
+                "width": `${this.$children.length*this.itemWidth}px`,
             };
-
-            return style;
         },
-        transform(){
+        transition(){
             return `transform ${this.speed}ms ease-in-out`;
         },
         cursorPos(){
@@ -84,82 +80,56 @@ export default {
             }
             return res;
         },
-        cursorStyle(){
-            let translateX = '';
+    },
+    watch: {
+        value(newVal, oldVal){
+            this.setCursorStyle();
+            this.setListStyle();
+        }
+    },
+    methods: {
+        setCursorStyle(){
+            let translateX = 0;
+            let style = this.cursor.style;
             if (this.cursorPos === "left") {
-                translateX = `translateX(${this.value*this.itemWidth}px)`;
+                translateX = this.value*this.itemWidth;
             } else if (this.cursorPos === "right") {
-                let offset = this.showCount - (this.itemCount - this.value);
-                translateX = `translateX(${offset*this.itemWidth}px)`;
+                translateX = (this.showCount - (this.itemCount - this.value))*this.itemWidth;
             } else if (this.cursorPos === "middle") {
-                translateX = `translateX(${this.activeInShow*this.itemWidth}px)`;
+                translateX = this.activeInShow*this.itemWidth;
             }
-            return {
-                "width": `${this.itemWidth}px`,
-                "transition": this.transform,
-                "transform": translateX
-            };
+            this.cursorTranslateX = Math.round(translateX);
+            style["width"] = `${this.itemWidth}px`;
+            style["transition"] = this.transition;
+            style["transform"] = `translateX(${this.cursorTranslateX}px)`;
         },
-        listStyle(){
-            let style = {"transition": this.transform};
-            /**
+        setListStyle(){
+             /**
              *  选中的元素若不能滚动到可视区域的中间位置，
              *  则让整个tab滚动到最左端或者最右边，
              *  若能则让选择的元素滚到中间位置
              * */
-            if (this.value < this.activeInShow) {
-                style["transform"] = `translateX(0px)`;
-            } else if (this.itemCount - this.value < this.showCount - this.activeInShow) {
-                style["transform"] = `translateX(-${(this.itemCount - this.showCount)*this.itemWidth}px)`;
-            } else {
-                style["transform"] = `translateX(-${(this.value - this.activeInShow)*this.itemWidth}px)`;
+            let translateX = 0;
+            let style = this.list.style;
+            if (this.cursorPos === "left") {
+                translateX = 0;
+            } else if (this.cursorPos === "right") {
+                translateX = -(this.itemCount - this.showCount)*this.itemWidth;
+            } else if (this.cursorPos === "middle") {
+                translateX = -(this.value - this.activeInShow)*this.itemWidth;
             }
-            return style;
-        }
-    },
-
-    methods: {
-        itemStyle(item){
-            let styleObj = {'width': 1/this.tabs.length*100 + '%'};
-            if(item.align) styleObj['text-align'] = item.align;
-            return styleObj;
-        },
-        itemClass(item, index){
-            let cls = [`${prefixCls}` + '-item'];
-            if(index == this.activeInTotal) cls.push('active');
-            return cls;
-        },
-        listStyles(){
-            return {
-                'width': this.tabsCouut/this.maxShow*100 + '%',
-                'left': 0
-            }
+            this.listTranslateX = translateX;
+            style["transitionc"] = this.transition;
+            style["transform"] = `translateX(${translateX}px)`;
         },
         setActiveInShow(){//获取显示区域，当前选中的应该在什么位置
             let showCount = this.showCount >= 3 ? this.showCount : 3;
             this.activeInShow = this.showCount%2 === 0 ? (this.showCount/2 - 1) : ~~(this.showCount/2);
         },
-       
-        changeTab(index){
-
-            console.log(111, index)
-            //如果当前时已选中的直接返回
-            // if(this.activeInTotal === index) return;
-            // this.$emit("beforeChange", {
-            //     active: this.activeInTotal,
-            //     current: index
-            // });
-            // this.scrollTo(index);
-            // this.$emit("afterChanged", {
-            //     active: index,
-            //     current: index
-            // });
-        },
-        
         initBusEvent(){
-            this.bus.$on("changeTab", index => {
-                // this.scrollTo(index)
+            this.bus.$on("changeTab", ({index, type}) => {
                 if (index == this.vaule) return;
+                this.eventType = type;
                 this.$emit("input", index)
             })
         },
@@ -172,35 +142,54 @@ export default {
         initProcess(){
             this.width = this.$refs.inner.clientWidth;
             this.itemCount = this.$children.length;
+            this.cursor = this.$refs.cursor;
+            this.list = this.$refs.list;
+            this.setActiveInShow();//设置选中的那一项在显示区域的第几个
+            this.initBusEvent();
         },
-        onScrollStart(){
-
+        onScrollStart(e){
+            this.tempX = this.startX = e.touches[0].clientX;
         },
-        onScrollMove(){
-            
+        onScrollMove(e){
+            let x = e.touches[0].clientX - this.startX;
+            let moveX = e.touches[0].clientX - this.tempX;
+            this.tempX = e.touches[0].clientX;
+            if (this.listTranslateX + x >= 0 || Math.abs(this.listTranslateX + x) > Math.abs(this.itemCount - this.showCount)*this.itemWidth) {
+                moveX = moveX/2;
+            }
+            this.cursor.style["transform"] = `translateX(${this.cursorTranslateX = Math.round(this.cursorTranslateX + moveX)}px)`;
+            this.cursor.style["transition"] = "";
+            this.list.style["transform"] = `translateX(${this.listTranslateX = Math.round(this.listTranslateX + moveX)}px)`;
+            this.list.style["transition"] = "";
         },
-        onScrollEnd(){
-            
+        onScrollEnd(e){
+            let cursorTranslateX = this.value*this.itemWidth;
+            console.log(e.changedTouches[0].clientX - this.tempX, cursorTranslateX, this.cursorTranslateX,10)
+            let listStyle = this.list.style;
+            let cursorStyle = this.cursor.style;
+            let rightX = -(this.itemCount - this.showCount)*this.itemWidth;
+            if (this.listTranslateX > 0){
+                listStyle["transform"] = `translateX(0px)`;
+                this.listTranslateX = 0;
+                cursorStyle["transform"] = `translateX(${cursorTranslateX}px)`;
+                this.cursorTranslateX = cursorTranslateX;
+            } else if (Math.abs(this.listTranslateX) > Math.abs(rightX)) {
+                listStyle["transform"] = `translateX(${rightX}px)`;
+                this.listTranslateX = rightX;
+                this.cursorTranslateX = Math.round(((this.showCount) - (this.itemCount - this.value))*this.itemWidth);
+                cursorStyle["transform"] = `translateX(${this.cursorTranslateX}px)`;
+            }
+            listStyle['transition'] = this.transition;
+            cursorStyle['transition'] = this.transition;
         }
     },
-
     created () {
-        this.initBusEvent();
-        //设置选中的那一项在显示区域的第几个
-        this.setActiveInShow();
     },
     mounted () {
         this.initVerify();
         this.initProcess();
-        //获取tabs的dom元素
-        
-        // this.$
-
-       
-        // this.scrollTo(this.activeInTotal);
-
-
-
+        this.setCursorStyle();
+        this.setListStyle();
     }
 }
 </script>

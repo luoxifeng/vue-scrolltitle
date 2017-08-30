@@ -33,7 +33,10 @@ export default {
     },
     methods: {
         changeTab(index){
-            this.bus.$emit("changeTab", index)
+            this.bus.$emit("changeTab", {
+                "index": index,
+                "type": "click"
+            })
         }
     },
     mounted(){

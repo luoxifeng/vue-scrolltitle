@@ -3,11 +3,9 @@
         <scroll-title v-model="s"
             showCount="5"
             speed="300">
-            
             <scroll-title-item v-for="(v, i) in arr" :key="i" >
                 {{v}}
             </scroll-title-item>
-
         </scroll-title>
     </div>
 </template>
