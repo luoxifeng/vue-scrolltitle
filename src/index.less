@@ -8,7 +8,6 @@
     width: 100%;
     overflow: hidden;
     position: relative;
-    min-height: 36px;
     border: 1px solid #d1dbe5;
     border-left: none;
 }
@@ -35,10 +34,10 @@
 }
 
 .scroll-title-item{
+    cursor: pointer;
     flex: 1;
     position: relative;
     overflow: hidden;
-    cursor: pointer;
     color: #8391a5;
     min-height: 30px;
     &:before{
@@ -50,23 +49,15 @@
         background: #d1dbe5;
     }
    
-    &.active{
-        background: #fff;
-        color: #20a0ff;
-        &:hover{
-            color: #20a0ff;
-        }
-    }
+    
 
-    &:hover{
-        color: #1f2d3d;
-    }
+    
+}
 
-    a{
-        padding: 10px 16px;
-        display: inline-block;
-        font-size: 14px;
-    }
+.scroll-title-item-active{
+    color: #20a0ff;
+    background: rgba(0, 0, 0, .5);
+   
 }
 
 .scroll-title-cursor{

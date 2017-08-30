@@ -1,9 +1,14 @@
 <template>
     <div :class="[prefixCls, wrapCls]">
         <div :class="[prefixCls + '-inner']" ref="inner">
-            <div class="scroll-title-slider" :style="sliderStyle" ref="slider">
+            <div class="scroll-title-slider" :style="sliderStyle" ref="slider"
+                >
                 <div class="scroll-title-cursor" :style="cursorStyle"></div>
-                <ul :class="[prefixCls + '-list']"  ref="barList">
+                <ul :class="[prefixCls + '-list']"  ref="barList" :style="listStyle"
+                    @touchstart="onScrollStart"
+                    @touchmove="onScrollMove"
+                    @touchend="onScrollEnd"
+                    >
                     <slot></slot>
                 </ul>
             </div>
@@ -22,7 +27,6 @@ export default {
             bus: new EventEmitter(),
             width: 0,
             prefixCls: prefixCls,
-            
             activeInShow: 0,//当前选中的在显示的tab的位置
             itemCount: 0,
         }
@@ -33,7 +37,7 @@ export default {
             default: ''
         },
         showCount: {//可视区域最大显示数
-            type: Number,
+            type: [Number, String],
             default: 3
         },
         speed: {
@@ -44,7 +48,7 @@ export default {
             type: [Number, String],
             default: 300
         },
-        value: {
+        value: {//当前选中的在所有tab的位置
             type: Number,
             default: 0
         },
@@ -53,9 +57,6 @@ export default {
 
     },
     computed: {
-        activeInTotal(){//当前选中的在所有tab的位置
-            return this.value;
-        },
         itemWidth(){
             return this.width/this.showCount;
         },
@@ -72,13 +73,47 @@ export default {
         transform(){
             return `transform ${this.speed}ms ease-in-out`;
         },
+        cursorPos(){
+            let res;
+            if (this.value < this.activeInShow) {
+                res = 'left';
+            } else if (this.itemCount - this.value < this.showCount - this.activeInShow) {
+                res = 'right';
+            } else {
+                res = 'middle';
+            }
+            return res;
+        },
         cursorStyle(){
-            let style = {
+            let translateX = '';
+            if (this.cursorPos === "left") {
+                translateX = `translateX(${this.value*this.itemWidth}px)`;
+            } else if (this.cursorPos === "right") {
+                let offset = this.showCount - (this.itemCount - this.value);
+                translateX = `translateX(${offset*this.itemWidth}px)`;
+            } else if (this.cursorPos === "middle") {
+                translateX = `translateX(${this.activeInShow*this.itemWidth}px)`;
+            }
+            return {
                 "width": `${this.itemWidth}px`,
+                "transition": this.transform,
+                "transform": translateX
             };
-            style["transform"] = `translateX(${this.value*this.itemWidth}px)`;
-            style["transition"] = this.transform;
-
+        },
+        listStyle(){
+            let style = {"transition": this.transform};
+            /**
+             *  选中的元素若不能滚动到可视区域的中间位置，
+             *  则让整个tab滚动到最左端或者最右边，
+             *  若能则让选择的元素滚到中间位置
+             * */
+            if (this.value < this.activeInShow) {
+                style["transform"] = `translateX(0px)`;
+            } else if (this.itemCount - this.value < this.showCount - this.activeInShow) {
+                style["transform"] = `translateX(-${(this.itemCount - this.showCount)*this.itemWidth}px)`;
+            } else {
+                style["transform"] = `translateX(-${(this.value - this.activeInShow)*this.itemWidth}px)`;
+            }
             return style;
         }
     },
@@ -94,7 +129,7 @@ export default {
             if(index == this.activeInTotal) cls.push('active');
             return cls;
         },
-        listStyle(){
+        listStyles(){
             return {
                 'width': this.tabsCouut/this.maxShow*100 + '%',
                 'left': 0
@@ -120,48 +155,49 @@ export default {
             //     current: index
             // });
         },
-        scrollTo(index){
-            /**
-             *  选中的元素若不能滚动到可视区域的中间位置，
-             *  则让整个tab滚动到最左端或者最右边，
-             *  若能则让选择的元素滚到中间位置
-             * */
-            if (index < this.activeInShow) {
-                this.barList.style.left = 0;
-            } else if (this.tabsCouut - index < this.maxShow - this.activeInShow) {
-                    this.barList.style.left = -(this.tabsCouut/this.maxShow - 1)*100 + "%";
-            } else {
-                this.barList.style.left = -1/this.maxShow*(index - this.activeInShow)*100 + "%";
-            }
-            this.activeInTotal = index;
-        },
+        
         initBusEvent(){
             this.bus.$on("changeTab", index => {
-                this.scrollTo(index)
+                // this.scrollTo(index)
+                if (index == this.vaule) return;
+                this.$emit("input", index)
             })
         },
-        verifyComponent(){
+        initVerify(){
             //初始要显示的不能小于0，不能大于总数
             if (this.value < 0 || this.value >= this.$children.length) 
                 throw new Error(`value out of range ([0, ${this.$children.length - 1}])`);
 
+        },
+        initProcess(){
+            this.width = this.$refs.inner.clientWidth;
+            this.itemCount = this.$children.length;
+        },
+        onScrollStart(){
+
+        },
+        onScrollMove(){
+            
+        },
+        onScrollEnd(){
+            
         }
     },
+
     created () {
         this.initBusEvent();
         //设置选中的那一项在显示区域的第几个
         this.setActiveInShow();
-        //获取当前选中的在所有tab的位置
-        // this.activeInTotal = this.getActiveInTotal();
     },
     mounted () {
-        this.verifyComponent();
+        this.initVerify();
+        this.initProcess();
         //获取tabs的dom元素
-        this.width = this.$refs.inner.clientWidth;
+        
         // this.$
 
-        this.barList = this.$refs.barList;
-        this.scrollTo(this.activeInTotal);
+       
+        // this.scrollTo(this.activeInTotal);
 
 
 

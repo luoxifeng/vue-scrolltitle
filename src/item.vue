@@ -1,6 +1,6 @@
 <template>
     <li :index="index" class="scroll-title-item" 
-        :class="[activeInTotal == index ? 'scroll-title-item-active' : '']"
+        :class="[active == index ? 'scroll-title-item-active' : '']"
         @click="changeTab(index)">
         <slot></slot>
     </li>
@@ -12,8 +12,6 @@ export default {
     data(){
         return {
             index: 0,
-            // activeInTotal: 0,
-            activeInShow: 0
         }
     },
     computed: {
@@ -23,8 +21,11 @@ export default {
         width(){
             return this.$parent.itemWidth;
         },
-        activeInTotal(){
-            return this.$parent.activeInTotal;
+        active(){
+            return this.$parent.value;
+        },
+        activeInShow(){
+            return this.$parent.activeInShow;
         }
     },
     created(){
