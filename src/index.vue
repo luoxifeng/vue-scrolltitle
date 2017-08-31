@@ -1,5 +1,5 @@
 <template>
-    <div :class="['scroll-title', wrapCls]">
+    <div :class="['scroll-title', wrapperCls]">
         <div class="scroll-title-inner" ref="inner">
             <div class="scroll-title-slider" :style="sliderStyle" ref="slider"
                 >
@@ -33,10 +33,11 @@ export default {
             list: {},
             cursorTranslateX: 0,
             listTranslateX: 0,
+            action: "change"
         }
     },
     props: {
-        wrapCls: {//组件根元素自定义样式
+        wrapperCls: {//组件根元素自定义样式
             type: String,
             default: ''
         },
@@ -49,15 +50,28 @@ export default {
             default: 300
         },
         animate: {
-            type: [Number, String],
-            default: 300
+            type: [Boolean, String],
+            default: false
         },
         value: {//当前选中的在所有tab的位置
             type: Number,
             default: 0
         },
+        slidable: {
+            type: Boolean,
+            default: false,
+        }
     },
     computed: {
+        animateType(){
+            let res = "ease-in-out";
+            if (is.str(this.animate)) {
+                res = this.animate.trim() || res;
+            } else if (this.animate === false) {
+                res = "";
+            }
+            return res;
+        },
         itemWidth(){
             return this.width/this.showCount;
         },
@@ -67,7 +81,7 @@ export default {
             };
         },
         transition(){
-            return `transform ${this.speed}ms ease-in-out`;
+            return this.animateType ? `transform ${this.speed}ms ${this.animateType}` : "";
         },
         cursorPos(){
             let res;
@@ -127,10 +141,33 @@ export default {
             this.activeInShow = this.showCount%2 === 0 ? (this.showCount/2 - 1) : ~~(this.showCount/2);
         },
         initBusEvent(){
-            this.bus.$on("changeTab", ({index, type}) => {
+            let prev = this.value;
+            if(this.animateType) {
+                this.cursor.addEventListener("webkitTransitionEnd", () => {
+                    if (this.action != "click") return;
+                    this.$emit("afterChange", {
+                        curr: this.value,
+                        prev: prev
+                    })
+                })
+            }
+            this.bus.$on("changeTab", ({ index }) => {
                 if (index == this.vaule) return;
-                this.eventType = type;
-                this.$emit("input", index)
+                this.action = "click";
+                prev = this.value;
+                this.$emit("beforeChange", {
+                    curr: this.value,
+                    next: index
+                })
+                this.$emit("input", index);
+                if(!this.animateType){
+                    this.$nextTick(() => {
+                        this.$emit("afterChange", {
+                            curr: this.value,
+                            prev: prev
+                        })
+                    })
+                }
             })
         },
         initVerify(){
@@ -138,6 +175,10 @@ export default {
             if (this.value < 0 || this.value >= this.$children.length) 
                 throw new Error(`value out of range ([0, ${this.$children.length - 1}])`);
 
+            //当不可以滑动的时候，显示的条目必须大于3，让其可以切到左边和右边
+            if (this.showCount == 2 && !this.slidable)
+                throw new Error(`when the 'showCount = 2', slidable must set be true`);
+            
         },
         initProcess(){
             this.width = this.$refs.inner.clientWidth;
@@ -148,9 +189,11 @@ export default {
             this.initBusEvent();
         },
         onScrollStart(e){
+            if (!this.slidable) return;
             this.tempX = this.startX = e.touches[0].clientX;
         },
         onScrollMove(e){
+            if (!this.slidable) return;
             let x = e.touches[0].clientX - this.startX;
             let moveX = e.touches[0].clientX - this.tempX;
             this.tempX = e.touches[0].clientX;
@@ -163,8 +206,9 @@ export default {
             this.list.style["transition"] = "";
         },
         onScrollEnd(e){
+            if (!this.slidable) return;
+            this.action = "scroll";
             let cursorTranslateX = this.value*this.itemWidth;
-            console.log(e.changedTouches[0].clientX - this.tempX, cursorTranslateX, this.cursorTranslateX,10)
             let listStyle = this.list.style;
             let cursorStyle = this.cursor.style;
             let rightX = -(this.itemCount - this.showCount)*this.itemWidth;

@@ -1,7 +1,9 @@
 <template>
     <div>
         <scroll-title v-model="s"
-            showCount="5"
+            animate
+            slidable
+            showCount="3"
             speed="300">
             <scroll-title-item v-for="(v, i) in arr" :key="i" >
                 {{v}}
@@ -15,8 +17,8 @@ import {ScrollTitle, ScrollTitleItem } from "./index"
 export default {
     data(){
         return {
-            arr: Array.from({length: 10}).map((t,k) => k),
-            s: 3
+            arr: Array.from({length: 3}).map((t,k) => k),
+            s: 2
         }
     },
     components: {

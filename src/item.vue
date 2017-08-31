@@ -35,7 +35,6 @@ export default {
         changeTab(index){
             this.bus.$emit("changeTab", {
                 "index": index,
-                "type": "click"
             })
         }
     },
