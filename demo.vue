@@ -2,6 +2,7 @@
     <div>
         <scroll-title v-model="s"
             animate
+            slidable
             showCount="5"
             speed="300">
             <scroll-title-item v-for="(v, i) in arr" :key="i" >
@@ -17,7 +18,7 @@ export default {
     data(){
         return {
             arr: Array.from({length: 8}).map((t,k) => k),
-            s: 3
+            s: 4
         }
     },
     components: {
