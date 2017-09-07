@@ -34,6 +34,6 @@
 .scroll-title-cursor {
   position: absolute;
   z-index: 1;
-  background: red;
+  background: linear-gradient(#3c3c3c, #16dabf, #3c3c3c);
   height: 100%;
 }

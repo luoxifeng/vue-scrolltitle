@@ -1,14 +1,13 @@
 <template>
     <div :class="['scroll-title', wrapperCls]">
         <div class="scroll-title-inner" ref="inner">
-            <div class="scroll-title-slider" :style="sliderStyle" ref="slider"
-                >
-                <div class="scroll-title-cursor"  ref="cursor"></div>
-                <ul class="scroll-title-list"  ref="list"
+            <div class="scroll-title-slider" :style="sliderStyle" ref="slider">
+                <div class="scroll-title-cursor"  ref="cursor">
+                </div>
+                <ul class="scroll-title-list"  ref="list" 
                     @touchstart="onScrollStart"
                     @touchmove="onScrollMove"
-                    @touchend="onScrollEnd"
-                    >
+                    @touchend="onScrollEnd">
                     <slot></slot>
                 </ul>
             </div>
@@ -33,7 +32,8 @@ export default {
             list: {},
             cursorTranslateX: 0,
             listTranslateX: 0,
-            action: "change"
+            action: "change",
+            startTime: 0
         }
     },
     props: {
@@ -133,7 +133,7 @@ export default {
                 translateX = -(this.value - this.activeInShow)*this.itemWidth;
             }
             this.listTranslateX = translateX;
-            style["transitionc"] = this.transition;
+            style["transition"] = this.transition;
             style["transform"] = `translateX(${translateX}px)`;
         },
         setActiveInShow(){//获取显示区域，当前选中的应该在什么位置
@@ -171,6 +171,10 @@ export default {
             })
         },
         initVerify(){
+            //屏幕可见区域的总数不能大于item总个数
+            if (this.showCount > this.$children.length) 
+                throw new Error(`showCount must less or equal the count of item`);
+
             //初始要显示的不能小于0，不能大于总数
             if (this.value < 0 || this.value >= this.$children.length) 
                 throw new Error(`value out of range ([0, ${this.$children.length - 1}])`);
@@ -191,6 +195,7 @@ export default {
         onScrollStart(e){
             if (!this.slidable) return;
             this.tempX = this.startX = e.touches[0].clientX;
+            this.startTime = e.timeStamp
         },
         onScrollMove(e){
             if (!this.slidable) return;
@@ -217,14 +222,29 @@ export default {
                 this.listTranslateX = 0;
                 cursorStyle["transform"] = `translateX(${cursorTranslateX}px)`;
                 this.cursorTranslateX = cursorTranslateX;
+                listStyle['transition'] = this.transition;
+                cursorStyle['transition'] = this.transition;
             } else if (Math.abs(this.listTranslateX) > Math.abs(rightX)) {
                 listStyle["transform"] = `translateX(${rightX}px)`;
                 this.listTranslateX = rightX;
                 this.cursorTranslateX = Math.round(((this.showCount) - (this.itemCount - this.value))*this.itemWidth);
                 cursorStyle["transform"] = `translateX(${this.cursorTranslateX}px)`;
+                listStyle['transition'] = this.transition;
+                cursorStyle['transition'] = this.transition;
+            } else {
+                let offset = e.changedTouches[0].clientX - this.startX;
+                let speedRatio = Math.abs(offset/(e.timeStamp - this.startTime))/(this.width/1000);
+                let distance = (offset > 0 ? 1 : -1)*4*speedRatio;
+                setTimeout(() => {
+                    listStyle["transform"] = `translateX(${this.listTranslateX}px)`;
+                    cursorStyle["transform"] = `translateX(${this.cursorTranslateX}px)`;
+                }, 300)
+                listStyle["transform"] = `translateX(${this.listTranslateX + distance}px)`;
+                cursorStyle["transform"] = `translateX(${this.cursorTranslateX + distance}px)`;
+                listStyle['transition'] = `transform ${300}ms ${this.animateType}`;
+                cursorStyle['transition'] = `transform ${300}ms ${this.animateType}`;
             }
-            listStyle['transition'] = this.transition;
-            cursorStyle['transition'] = this.transition;
+            
         }
     },
     created () {
